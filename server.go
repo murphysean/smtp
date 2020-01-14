@@ -217,7 +217,7 @@ func (c *conn) readCommand() error {
 		c.server.logfd("<%d %s\n", 500, "Command not recognized")
 		return c.text.PrintfLine("%d %s", 500, "Command not recognized")
 	}
-	switch parts[0] {
+	switch strings.ToUpper(parts[0]) {
 	case "HELO":
 		if len(parts) < 2 {
 			c.server.logfd("<%d %s\n", 501, "Not enough arguments")
@@ -315,7 +315,7 @@ func (c *conn) readCommand() error {
 			return c.text.PrintfLine("%d %s", 501, "Not enough arguments")
 		}
 		ppwd := ""
-		if len(parts) == 2 && parts[1] == "PLAIN" {
+		if len(parts) == 2 && strings.ToUpper(parts[1]) == "PLAIN" {
 			c.server.logfd("<%d %s\n", 334, "")
 			err := c.text.PrintfLine("%d %s", 334, "")
 			if err != nil {
@@ -328,7 +328,7 @@ func (c *conn) readCommand() error {
 			}
 			c.server.logfd(">%s\n", ppwd)
 		}
-		if len(parts) == 3 && parts[1] == "PLAIN" {
+		if len(parts) == 3 && strings.ToUpper(parts[1]) == "PLAIN" {
 			ppwd = parts[2]
 		}
 		//Call the call back method with the username and password
@@ -360,7 +360,7 @@ func (c *conn) readCommand() error {
 			c.server.logfd("<%d %s\n", 501, "Not enough arguments")
 			return c.text.PrintfLine("%d %s", 501, "Not enough arguments")
 		}
-		if !strings.HasPrefix(parts[1], "FROM:") {
+		if !strings.HasPrefix(strings.ToUpper(parts[1]), "FROM:") {
 			c.server.logfd("<%d %s\n", 501, "MAIL command must be immediately succeeded by 'FROM:'")
 			return c.text.PrintfLine("%d %s", 501, "MAIL command must be immediately succeeded by 'FROM:'")
 		}
@@ -384,7 +384,7 @@ func (c *conn) readCommand() error {
 			c.server.logfd("<%d %s\n", 501, "Not enough arguments")
 			return c.text.PrintfLine("%d %s", 501, "Not enough arguments")
 		}
-		if !strings.HasPrefix(parts[1], "TO:") {
+		if !strings.HasPrefix(strings.ToUpper(parts[1]), "TO:") {
 			c.server.logfd("<%d %s\n", 501, "RCPT command must be immediately succeeded by 'TO:'")
 			return c.text.PrintfLine("%d %s", 501, "RCPT command must be immediately succeeded by 'TO:'")
 		}
