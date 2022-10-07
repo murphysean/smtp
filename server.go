@@ -15,7 +15,8 @@ import (
 	"time"
 )
 
-var emailRegExp = regexp.MustCompile(`^<((\S+)@(\S+\.\S+))>$`)
+var emailFromRegExp = regexp.MustCompile(`(?i)(?:^| )FROM:[^<=]*<((\S+)@(\S+\.\S+))>`)
+var emailToRegExp = regexp.MustCompile(`(?i)(?:^| )TO:[^<=]*<((\S+)@(\S+\.\S+))>`)
 
 type Server struct {
 	Name    string
@@ -364,14 +365,11 @@ func (c *conn) readCommand() error {
 			c.server.logfd("<%d %s\n", 501, "MAIL command must be immediately succeeded by 'FROM:'")
 			return c.text.PrintfLine("%d %s", 501, "MAIL command must be immediately succeeded by 'FROM:'")
 		}
-		i := strings.Index(parts[1], ":")
-		addr := strings.Join(parts[1:], " ")[i+1:]
-		addr = strings.TrimSpace(addr)
-		if !emailRegExp.MatchString(addr) {
+		if !emailFromRegExp.MatchString(s) {
 			c.server.logfd("<%d %s\n", 501, "MAIL command contained invalid address")
 			return c.text.PrintfLine("%d %s", 501, "MAIL command contained invalid address")
 		}
-		from := emailRegExp.FindStringSubmatch(addr)[1]
+		from := emailFromRegExp.FindStringSubmatch(s)[1]
 		c.mailFrom = from
 		c.server.logfd("<%d %s\n", 250, "Ok")
 		return c.text.PrintfLine("%d %s", 250, "Ok")
@@ -388,14 +386,11 @@ func (c *conn) readCommand() error {
 			c.server.logfd("<%d %s\n", 501, "RCPT command must be immediately succeeded by 'TO:'")
 			return c.text.PrintfLine("%d %s", 501, "RCPT command must be immediately succeeded by 'TO:'")
 		}
-		i := strings.Index(parts[1], ":")
-		addr := strings.Join(parts[1:], " ")[i+1:]
-		addr = strings.TrimSpace(addr)
-		if !emailRegExp.MatchString(addr) {
+		if !emailToRegExp.MatchString(s) {
 			c.server.logfd("<%d %s\n", 501, "RCPT command contained invalid address")
 			return c.text.PrintfLine("%d %s", 501, "RCPT command contained invalid address")
 		}
-		to := emailRegExp.FindStringSubmatch(addr)[1]
+		to := emailToRegExp.FindStringSubmatch(s)[1]
 		//Check the handler to see if the inbox has a registered listener
 		if c.server.Addressable != nil && !c.server.Addressable(c.user, to) {
 			c.server.logfd("<%d %s\n", 501, "no such user - "+to)
