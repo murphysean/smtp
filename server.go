@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -83,6 +84,11 @@ var (
 
 type Handler interface {
 	ServeSMTP(envelope *Envelope) error
+}
+
+type SMTPError struct {
+	Code    int
+	Message string
 }
 
 type ServeMux struct {
@@ -422,8 +428,14 @@ func (c *conn) readCommand() error {
 		}
 		if err != nil {
 			c.resetSession()
-			c.server.logfd("<%d %s\n", 450, "Mailbox unavailable")
-			return c.text.PrintfLine("%d %s", 450, "Mailbox unavailable")
+			smtpErr, isSMTPErr := err.(SMTPError)
+			if isSMTPErr {
+				c.server.logfd("<%d %s\n", smtpErr.Code, smtpErr.Message)
+				return c.text.PrintfLine("%d %s", smtpErr.Code, smtpErr.Message)
+			} else {
+				c.server.logfd("<%d %s\n", 450, "Mailbox unavailable")
+				return c.text.PrintfLine("%d %s", 450, "Mailbox unavailable")
+			}
 		}
 
 		//Reset the to,from, and data fields
@@ -568,8 +580,6 @@ func (mux *ServeMux) ServeSMTP(envelope *Envelope) error {
 			return errors.New("Bad Address")
 		}
 	}
-
-	return nil
 }
 
 func ListenAndServe(addr string, handler Handler) error {
@@ -586,4 +596,8 @@ func ListenAndServeTLS(addr, certFile, keyFile string, handler Handler) error {
 	}
 	server := &Server{Addr: addr, Handler: handler}
 	return server.ListenAndServeTLS(certFile, keyFile)
+}
+
+func (e SMTPError) Error() string {
+	return fmt.Sprintf("%d %s", e.Code, e.Message)
 }
